@@ -1,6 +1,7 @@
 from scrapy.contrib.spiders import CrawlSpider
 from scrapy.contrib.spiders import Rule
 from scrapy.contrib.linkextractors.sgml import SgmlLinkExtractor
+from scrapy.http import Request, FormRequest
 
 from oxygen.items import OxygenItem
 
@@ -8,6 +9,7 @@ import pyquery
 
 ## My imports
 import re
+from formdata import formvalues
 from resources import colors
 from resources import accessories
 from resources import jewelry
@@ -25,6 +27,20 @@ class OxygenSpider(CrawlSpider):
         Rule(SgmlLinkExtractor(restrict_xpaths='//ul[@class="topnav"]', allow=(r'(Sale\-In|clothing|[Aa]ll)\.aspx')),
              process_links='viewAll', follow=True),
     )
+
+    def __init__(self, **kwargs):
+        CrawlSpider.__init__(self, **kwargs)
+
+    def start_requests(self):
+        yield Request('http://www.oxygenboutique.com/Currency.aspx', callback=self.set_currency)
+
+    def set_currency(self, response):
+        return [FormRequest.from_response(response,
+                    formdata=formvalues,
+                    callback=self.after_changed_currency)]
+
+    def after_changed_currency(self, response):
+        return [Request(url=self.start_urls[0])]
 
     def viewAll(self, links):
         '''add parameter to view all items on same site'''
